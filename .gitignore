@@ -9,3 +9,7 @@ dist/
 *.egg-info/
 .idea/
 .vscode/
+
+# 数据库配置（含密码）
+config/db_config.py
+migrate_add_role.py
