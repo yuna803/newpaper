@@ -1,0 +1,22 @@
+# 后端核心
+fastapi>=0.100
+uvicorn>=0.30
+sqlalchemy>=2.0
+aiomysql>=0.2
+pymysql>=1.1
+pydantic>=2.0
+
+# 认证
+bcrypt>=4.0
+
+# AI / 向量检索
+openai>=1.0
+faiss-cpu>=1.7
+numpy>=1.26,<2.1
+
+# 爬虫
+requests>=2.30
+beautifulsoup4>=4.12
+
+# 工具
+python-multipart>=0.0.6
