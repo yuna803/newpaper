@@ -15,3 +15,17 @@ async def get_current_user(authorization: str = Header(..., alias="Authorization
         from fastapi import HTTPException
         raise HTTPException(status_code=404,detail="令牌无效")
     return user
+
+
+async def get_current_admin(authorization: str = Header(..., alias="Authorization"),
+                            db: AsyncSession = Depends(get_db),
+                            ):
+    token = authorization.split(" ")[-1]
+    user = await crud_users.get_user_info(db, token)
+    if not user:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="令牌无效")
+    if user.role != "admin":
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="无管理员权限")
+    return user

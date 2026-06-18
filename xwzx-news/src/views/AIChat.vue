@@ -51,20 +51,15 @@ import TabBar from '../components/TabBar.vue';
 import { showToast } from 'vant';
 import * as marked from 'marked';
 import DOMPurify from 'dompurify';
-import { aiChatConfig } from '../config/api';
+import { apiConfig } from '../config/api';
 
 // 聊天消息
 const messages = ref([
-  { role: 'assistant', content: '你好！我是AI助手，有什么可以帮助你的吗？' }
+  { role: 'assistant', content: '你好！我是AI新闻助手，可以基于站内新闻回答你的问题。试试问我"最近有什么科技新闻"或"美伊局势如何"吧！' }
 ]);
 const userInput = ref('');
 const messagesContainer = ref(null);
 const isLoading = ref(false);
-
-// 从配置文件获取API设置
-const apiEndpoint = ref(aiChatConfig.apiEndpoint);
-const apiKey = ref(aiChatConfig.apiKey);
-const model = ref(aiChatConfig.model);
 
 // 格式化消息内容（支持Markdown）
 const formatMessage = (content) => {
@@ -76,33 +71,21 @@ const formatMessage = (content) => {
 // 发送消息
 const sendMessage = async () => {
   if (!userInput.value.trim() || isLoading.value) return;
-  
-  // 检查API设置
-  if (!apiKey.value || apiKey.value === 'your-api-key-here') {
-    showToast('API Key未配置，请联系管理员');
-    return;
-  }
-  
-  // 添加用户消息
+
   const userMessage = userInput.value.trim();
   messages.value.push({ role: 'user', content: userMessage });
   userInput.value = '';
-  
-  // 添加AI消息占位
   messages.value.push({ role: 'assistant', content: '' });
-  
-  // 滚动到底部
+
   await nextTick();
   scrollToBottom();
-  
-  // 发送请求
+
   isLoading.value = true;
   try {
-    await fetchAIResponse(userMessage);
+    await fetchAIResponse();
   } catch (error) {
-    console.error('Error fetching AI response:', error);
-    // 更新最后一条消息为错误信息
-    messages.value[messages.value.length - 1].content = `发生错误: ${error.message || '请检查网络连接和API设置'}`;
+    console.error('Error:', error);
+    messages.value[messages.value.length - 1].content = `发生错误: ${error.message || '请稍后重试'}`;
   } finally {
     isLoading.value = false;
     await nextTick();
@@ -110,78 +93,55 @@ const sendMessage = async () => {
   }
 };
 
-// 获取AI响应（使用SSE）
-const fetchAIResponse = async (userMessage) => {
+// 调用后端 RAG 接口（SSE流式）
+const fetchAIResponse = async () => {
   const allMessages = messages.value
-    .slice(0, -1) // 排除最后一个空的assistant消息
+    .slice(0, -1)
     .map(msg => ({ role: msg.role, content: msg.content }));
-  
-  try {
-    const response = await fetch(apiEndpoint.value, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey.value}`,
-        'X-DashScope-SSE': 'enable' // 添加阿里云DashScope所需的SSE头
-      },
-      body: JSON.stringify({
-        model: model.value,
-        messages: allMessages,
-        stream: true
-      })
-    });
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error?.message || `HTTP error! status: ${response.status}`);
-    }
-    
-    // 处理SSE流
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let aiResponse = '';
-  
+
+  const response = await fetch(`${apiConfig.baseURL}/api/ai/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: allMessages, stream: true }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`请求失败 (${response.status})`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let aiResponse = '';
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    
+
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split('\n');
     buffer = lines.pop() || '';
-    
+
     for (const line of lines) {
       if (line.startsWith('data: ')) {
         const data = line.slice(6);
         if (data === '[DONE]') continue;
-        
         try {
           const json = JSON.parse(data);
-          // 适配阿里云DashScope的返回格式
-          const content = json.choices?.[0]?.delta?.content || 
-                         json.output?.text || 
-                         json.choices?.[0]?.message?.content || '';
+          const content = json.choices?.[0]?.delta?.content || '';
           if (content) {
             aiResponse += content;
-            // 更新最后一条消息
             messages.value[messages.value.length - 1].content = aiResponse;
             await nextTick();
             scrollToBottom();
           }
-        } catch (e) {
-          console.error('Error parsing SSE data:', e);
-        }
+        } catch {}
       }
     }
   }
-  
-  // 如果没有收到任何内容
+
   if (!aiResponse) {
-    messages.value[messages.value.length - 1].content = '抱歉，我无法生成回复。请检查API设置或稍后再试。';
-  }
-  } catch (error) {
-    console.error('Fetch error:', error);
-    throw error;
+    messages.value[messages.value.length - 1].content = '抱歉，暂时无法回复。请稍后再试。';
   }
 };
 

@@ -23,6 +23,7 @@ export default {
     title: '新闻资讯',
     more: '更多',
     refresh: '刷新',
+    search: '搜索新闻标题',
     loadMore: '加载更多',
     noMore: '没有更多了',
     categories: {
