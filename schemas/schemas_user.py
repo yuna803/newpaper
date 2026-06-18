@@ -15,6 +15,7 @@ class User_InfoBase(BaseModel):
 class userInfo(User_InfoBase):
     id: int
     username: str
+    role: Optional[str] = None
     model_config = ConfigDict(
         from_attributes=True  # 将orm模型属性映射为pydantic模型属性
     )

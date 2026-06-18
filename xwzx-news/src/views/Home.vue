@@ -9,6 +9,17 @@
       </div>
     </div>
     
+    <!-- 搜索栏 -->
+    <div class="search-bar">
+      <van-search
+        v-model="searchKeyword"
+        :placeholder="$t('home.search')"
+        shape="round"
+        @search="onSearch"
+        @clear="onSearchClear"
+      />
+    </div>
+
     <div class="category-tabs">
       <van-tabs v-model:active="activeTab" sticky swipeable animated>
         <van-tab 
@@ -53,6 +64,17 @@ const route = useRoute()
 const { t } = useI18n()
 const activeTab = ref(0)
 const tabsTop = ref(0)
+const searchKeyword = ref('')
+
+// 搜索
+const onSearch = () => {
+  if (searchKeyword.value.trim()) {
+    router.push({ path: '/search', query: { keyword: searchKeyword.value.trim() } })
+  }
+}
+const onSearchClear = () => {
+  searchKeyword.value = ''
+}
 
 // 监听路由变化
 watch(
@@ -212,6 +234,10 @@ const changeCategory = (categoryId) => {
   padding-bottom: 50px;
   background-color: #f7f8fa;
   min-height: 100vh;
+}
+
+.search-bar {
+  background: #fff;
 }
 
 .category-tabs {

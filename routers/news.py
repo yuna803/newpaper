@@ -45,6 +45,36 @@ async def get_news_list(categoryId: int = Query(...,alias="categoryId"),
   }
 }
 
+# 全局搜索（按标题）
+@router.get("/search")
+async def search_news(
+    keyword: str = Query(..., alias="keyword", min_length=1),
+    page: int = Query(1, alias="page"),
+    pageSize: int = Query(10, alias="pageSize", le=50),
+    db: AsyncSession = Depends(db_config.get_db),
+):
+    news_list, total = await crud_news.search_news(db, keyword, page, pageSize)
+    return {
+        "code": 200,
+        "message": "success",
+        "data": {
+            "list": [{
+                "id": n.id,
+                "title": n.title,
+                "description": n.description,
+                "image": n.image,
+                "author": n.author,
+                "publishTime": n.publish_time,
+                "categoryId": n.category_id,
+                "views": n.views,
+            } for n in news_list],
+            "total": total,
+            "page": page,
+            "pageSize": pageSize,
+        }
+    }
+
+
 @router.get("/detail")
 async def get_news_detail(id: int=Query(...,alias="id"),db:AsyncSession=Depends(db_config.get_db)):
     news=await crud_news.get_news_detail(db,id)
@@ -63,7 +93,7 @@ async def get_news_detail(id: int=Query(...,alias="id"),db:AsyncSession=Depends(
         "id": news.id,
         "title": news.title,
         "content": news.content,
-        "image": "null",
+        "image": news.image,
         "author": news.author,
         "publishTime": news.publish_time,
         "categoryId": news.category_id,
