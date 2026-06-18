@@ -9,13 +9,5 @@ export const apiConfig = {
   baseURL: 'http://127.0.0.1:8000',
 }
 
-export const aiChatConfig = {
-  // OpenAI API地址
-  apiEndpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-  
-  // API Key (由开发人员指定)
-  apiKey: 'sk-9c4d89982a6a4bd3b7494d94751fe81c',
-  
-  // 使用的模型
-  model: 'qwen3-max-preview'
-}
+// AI 问答已迁移到后端 RAG，前端不再直接调用 LLM API
+// API Key 在后端环境变量 DASHSCOPE_API_KEY 中配置
